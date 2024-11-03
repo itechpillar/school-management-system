@@ -39,22 +39,32 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
   }
 
   async function googleSignIn() {
-    const result = await signInWithPopup(auth, googleProvider);
-    const role = await getUserRole(result.user.uid);
-    
-    if (!role) {
-      // Store the user temporarily until role is selected
-      setTempUser(result.user);
-      return { newUser: true, user: result.user };
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const role = await getUserRole(result.user.uid);
+      
+      if (!role) {
+        setTempUser(result.user);
+        return { newUser: true, user: result.user };
+      }
+      
+      // Update last login for existing users
+      await setDoc(doc(db, 'users', result.user.uid), {
+        lastLogin: new Date().toISOString()
+      }, { merge: true });
+      
+      setUserRole(role);
+      return { newUser: false, user: result.user };
+    } catch (error: any) {
+      console.error('Google Sign In Error:', error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        throw new Error('Sign-in was cancelled');
+      }
+      if (error.code === 'auth/popup-blocked') {
+        throw new Error('Please allow popups for this website');
+      }
+      throw error;
     }
-    
-    // Update last login for existing users
-    await setDoc(doc(db, 'users', result.user.uid), {
-      lastLogin: new Date().toISOString()
-    }, { merge: true });
-    
-    setUserRole(role);
-    return { newUser: false, user: result.user };
   }
 
   async function completeRegistration(user: FirebaseUser, selectedRole: UserRole) {

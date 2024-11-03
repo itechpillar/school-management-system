@@ -1,15 +1,15 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-    apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-    authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.REACT_APP_FIREBASE_APP_ID,
-    measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
+    apiKey: "AIzaSyDNoOAPLx9jtcoaj8vmxEgUKEqgLoklxpo",
+    authDomain: "schools-administration.firebaseapp.com",
+    projectId: "schools-administration",
+    storageBucket: "schools-administration.appspot.com",
+    messagingSenderId: "835283033630",
+    appId: "1:835283033630:web:399737f87282739846980f",
+    measurementId: "G-JLHC6QEK87"
 };
 
 // Initialize Firebase
@@ -17,17 +17,15 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Enable offline persistence
-enableIndexedDbPersistence(db)
-  .catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.error('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-    } else if (err.code === 'unimplemented') {
-      console.error('The current browser doesn\'t support persistence.');
-    }
-  });
-
 // Configure Google Auth Provider
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+    prompt: 'select_account',
+    access_type: 'offline'
+});
+
+// Add scopes if needed
+googleProvider.addScope('email');
+googleProvider.addScope('profile');
 
 // Remove firebase.js if it exists
