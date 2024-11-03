@@ -1,26 +1,55 @@
 import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import Login from './components/auth/Login';
+import PrivateRoute from './components/auth/PrivateRoute';
+import RoleRoute from './components/auth/RoleRoute';
+import Dashboard from './components/Dashboard';
+import { ROLES } from './constants/roles';
 
-function App() {
+const App: React.FC = () => {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin/*"
+            element={
+              <RoleRoute allowedRoles={[ROLES.ADMIN]}>
+                <Dashboard />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/teacher/*"
+            element={
+              <RoleRoute allowedRoles={[ROLES.TEACHER]}>
+                <Dashboard />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/nurse/*"
+            element={
+              <RoleRoute allowedRoles={[ROLES.NURSE]}>
+                <Dashboard />
+              </RoleRoute>
+            }
+          />
+          <Route path="/" element={<Login />} />
+        </Routes>
+      </AuthProvider>
+    </Router>
   );
-}
+};
 
 export default App;
