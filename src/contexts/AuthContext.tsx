@@ -1,10 +1,9 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { auth, db } from '../config/firebase';
+import { auth, db, googleProvider } from '../config/firebase';
 import { 
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  GoogleAuthProvider,
   signInWithPopup,
   User as FirebaseUser
 } from 'firebase/auth';
@@ -29,6 +28,7 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [tempUser, setTempUser] = useState<FirebaseUser | null>(null);
 
   async function getUserRole(uid: string): Promise<UserRole | null> {
     const userDoc = await getDoc(doc(db, 'users', uid));
@@ -38,6 +38,39 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     return null;
   }
 
+  async function googleSignIn() {
+    const result = await signInWithPopup(auth, googleProvider);
+    const role = await getUserRole(result.user.uid);
+    
+    if (!role) {
+      // Store the user temporarily until role is selected
+      setTempUser(result.user);
+      return { newUser: true, user: result.user };
+    }
+    
+    // Update last login for existing users
+    await setDoc(doc(db, 'users', result.user.uid), {
+      lastLogin: new Date().toISOString()
+    }, { merge: true });
+    
+    setUserRole(role);
+    return { newUser: false, user: result.user };
+  }
+
+  async function completeRegistration(user: FirebaseUser, selectedRole: UserRole) {
+    await setDoc(doc(db, 'users', user.uid), {
+      email: user.email,
+      role: selectedRole,
+      id: user.uid,
+      displayName: user.displayName,
+      photoURL: user.photoURL,
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString()
+    });
+    setUserRole(selectedRole);
+    setTempUser(null);
+  }
+
   async function login(email: string, password: string) {
     const result = await signInWithEmailAndPassword(auth, email, password);
     const role = await getUserRole(result.user.uid);
@@ -45,26 +78,9 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     return result;
   }
 
-  async function googleSignIn() {
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    const role = await getUserRole(result.user.uid);
-    if (!role) {
-      await setDoc(doc(db, 'users', result.user.uid), {
-        email: result.user.email,
-        role: 'teacher' as UserRole,
-        id: result.user.uid,
-        firebaseUser: result.user
-      });
-      setUserRole('teacher');
-    } else {
-      setUserRole(role);
-    }
-    return result;
-  }
-
   function logout(): Promise<void> {
     setUserRole(null);
+    setTempUser(null);
     return signOut(auth);
   }
 
@@ -73,8 +89,6 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
       if (user) {
         const role = await getUserRole(user.uid);
         setUserRole(role);
-      } else {
-        setUserRole(null);
       }
       setCurrentUser(user);
       setLoading(false);
@@ -86,9 +100,11 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
   const value: AuthContextType = {
     currentUser,
     userRole,
+    tempUser,
     login,
     logout,
-    googleSignIn
+    googleSignIn,
+    completeRegistration
   };
 
   return (

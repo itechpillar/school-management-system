@@ -6,7 +6,6 @@ export interface User {
   firstName?: string;
   lastName?: string;
   role: UserRole;
-  firebaseUser: FirebaseUser;
 }
 
 export type UserRole = 'admin' | 'teacher' | 'nurse';
@@ -14,9 +13,11 @@ export type UserRole = 'admin' | 'teacher' | 'nurse';
 export interface AuthContextType {
   currentUser: FirebaseUser | null;
   userRole: UserRole | null;
+  tempUser: FirebaseUser | null;
   login: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
-  googleSignIn: () => Promise<any>;
+  googleSignIn: () => Promise<{ newUser: boolean; user: FirebaseUser }>;
+  completeRegistration: (user: FirebaseUser, selectedRole: UserRole) => Promise<void>;
 }
 
 export interface RoleRouteProps {
